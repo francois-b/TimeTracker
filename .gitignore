@@ -1,0 +1,11 @@
+# Build artifacts
+TimeTracker.app/
+
+# macOS
+.DS_Store
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+build/
+DerivedData/

@@ -1,0 +1,109 @@
+import Foundation
+
+enum Activity: Int, CaseIterable {
+    case relax = 0
+    case research = 1
+    case work = 2
+    case content = 3
+    case jobSearch = 4
+
+    var displayName: String {
+        switch self {
+        case .relax: return "Relax"
+        case .research: return "Research"
+        case .work: return "Work"
+        case .content: return "Content"
+        case .jobSearch: return "Job Search"
+        }
+    }
+
+    var storageKey: String {
+        return "time_\(displayName.lowercased().replacingOccurrences(of: " ", with: "_"))"
+    }
+}
+
+class TimeTracker {
+    private var totalTimes: [Activity: TimeInterval] = [:]
+    private(set) var currentActivity: Activity?
+    private var currentStartTime: Date?
+    private var timer: Timer?
+
+    private let defaults = UserDefaults.standard
+
+    init() {
+        loadTimes()
+    }
+
+    func startTracking(activity: Activity) {
+        // Stop current tracking if any
+        stopTracking()
+
+        // Start new tracking
+        currentActivity = activity
+        currentStartTime = Date()
+
+        // Update every second
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateCurrentTime()
+        }
+    }
+
+    func stopTracking() {
+        guard let activity = currentActivity, let startTime = currentStartTime else {
+            return
+        }
+
+        // Calculate elapsed time and add to total
+        let elapsed = Date().timeIntervalSince(startTime)
+        totalTimes[activity, default: 0] += elapsed
+
+        // Save to persistent storage
+        saveTimes()
+
+        // Clean up
+        currentActivity = nil
+        currentStartTime = nil
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func updateCurrentTime() {
+        // This ensures the UI stays updated while tracking
+        // The actual time is calculated when stopping
+    }
+
+    func getTotalTime(for activity: Activity) -> TimeInterval {
+        var total = totalTimes[activity, default: 0]
+
+        // Add current session time if this activity is active
+        if currentActivity == activity, let startTime = currentStartTime {
+            total += Date().timeIntervalSince(startTime)
+        }
+
+        return total
+    }
+
+    func resetAllTimes() {
+        stopTracking()
+        totalTimes.removeAll()
+        saveTimes()
+    }
+
+    // MARK: - Persistence
+
+    private func loadTimes() {
+        for activity in Activity.allCases {
+            let time = defaults.double(forKey: activity.storageKey)
+            if time > 0 {
+                totalTimes[activity] = time
+            }
+        }
+    }
+
+    private func saveTimes() {
+        for activity in Activity.allCases {
+            let time = totalTimes[activity, default: 0]
+            defaults.set(time, forKey: activity.storageKey)
+        }
+    }
+}
