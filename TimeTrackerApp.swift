@@ -9,19 +9,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("=== TimeTracker Starting ===")
 
         // Create status bar item
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         print("Status item created: \(statusItem != nil)")
-
-        if let button = statusItem.button {
-            button.title = "⏱ TT"
-            print("Button title set to: ⏱ TT")
-        } else {
-            print("ERROR: Could not get status item button!")
-        }
 
         // Initialize time tracker
         timeTracker = TimeTracker()
         print("Time tracker initialized")
+
+        // Set initial button image (gray dot when nothing is active)
+        updateStatusBarButton()
 
         // Build menu
         buildMenu()
@@ -47,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             )
             item.tag = activity.rawValue
             item.target = self
+            item.image = createSmallDotImage(color: activity.color)
             menu.addItem(item)
         }
 
@@ -87,6 +84,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func updateMenu() {
+        // Update status bar button with colored dot
+        updateStatusBarButton()
+
         // Update checkmarks for active activity
         for activity in Activity.allCases {
             if let item = menu.item(withTag: activity.rawValue) {
@@ -101,6 +101,57 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 item.title = "  \(activity.displayName): \(formatTime(time))"
             }
         }
+    }
+
+    func updateStatusBarButton() {
+        guard let button = statusItem.button else { return }
+
+        let color: NSColor
+        if let currentActivity = timeTracker.currentActivity {
+            color = currentActivity.color
+        } else {
+            // Gray when nothing is active
+            color = NSColor(white: 0.5, alpha: 1.0)
+        }
+
+        button.image = createDotImage(color: color)
+        button.title = ""
+    }
+
+    func createDotImage(color: NSColor) -> NSImage {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size)
+
+        image.lockFocus()
+
+        // Draw a circle
+        let rect = NSRect(x: 2, y: 2, width: 14, height: 14)
+        let path = NSBezierPath(ovalIn: rect)
+        color.setFill()
+        path.fill()
+
+        image.unlockFocus()
+        image.isTemplate = false
+
+        return image
+    }
+
+    func createSmallDotImage(color: NSColor) -> NSImage {
+        let size = NSSize(width: 16, height: 16)
+        let image = NSImage(size: size)
+
+        image.lockFocus()
+
+        // Draw a smaller circle for menu items
+        let rect = NSRect(x: 3, y: 3, width: 10, height: 10)
+        let path = NSBezierPath(ovalIn: rect)
+        color.setFill()
+        path.fill()
+
+        image.unlockFocus()
+        image.isTemplate = false
+
+        return image
     }
 
     @objc func activitySelected(_ sender: NSMenuItem) {

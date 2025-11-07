@@ -1,4 +1,5 @@
 import Foundation
+import Cocoa
 
 enum Activity: Int, CaseIterable {
     case relax = 0
@@ -14,6 +15,16 @@ enum Activity: Int, CaseIterable {
         case .work: return "Work"
         case .content: return "Content"
         case .jobSearch: return "Job Search"
+        }
+    }
+
+    var color: NSColor {
+        switch self {
+        case .relax: return NSColor(red: 0.2, green: 0.8, blue: 0.4, alpha: 1.0) // Green
+        case .research: return NSColor(red: 0.3, green: 0.5, blue: 1.0, alpha: 1.0) // Blue
+        case .work: return NSColor(red: 1.0, green: 0.4, blue: 0.3, alpha: 1.0) // Red
+        case .content: return NSColor(red: 0.9, green: 0.6, blue: 0.2, alpha: 1.0) // Orange
+        case .jobSearch: return NSColor(red: 0.7, green: 0.3, blue: 0.9, alpha: 1.0) // Purple
         }
     }
 
