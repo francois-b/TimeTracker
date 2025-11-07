@@ -42,10 +42,12 @@ class TimeTracker {
     private let defaults = UserDefaults.standard
 
     init() {
+        Logger.shared.log("TimeTracker initializing")
         loadTimes()
     }
 
     func startTracking(activity: Activity) {
+        Logger.shared.log("Starting tracking for activity: \(activity.displayName)")
         // Stop current tracking if any
         stopTracking()
 
@@ -61,12 +63,15 @@ class TimeTracker {
 
     func stopTracking() {
         guard let activity = currentActivity, let startTime = currentStartTime else {
+            Logger.shared.log("stopTracking called but nothing was being tracked")
             return
         }
 
         // Calculate elapsed time and add to total
         let elapsed = Date().timeIntervalSince(startTime)
         totalTimes[activity, default: 0] += elapsed
+        
+        Logger.shared.log("Stopped tracking \(activity.displayName). Elapsed: \(elapsed) seconds")
 
         // Save to persistent storage
         saveTimes()
@@ -95,6 +100,7 @@ class TimeTracker {
     }
 
     func resetAllTimes() {
+        Logger.shared.log("Resetting all times")
         stopTracking()
         totalTimes.removeAll()
         saveTimes()
@@ -103,15 +109,18 @@ class TimeTracker {
     // MARK: - Persistence
 
     private func loadTimes() {
+        Logger.shared.log("Loading times from UserDefaults")
         for activity in Activity.allCases {
             let time = defaults.double(forKey: activity.storageKey)
             if time > 0 {
                 totalTimes[activity] = time
+                Logger.shared.log("Loaded \(activity.displayName): \(time) seconds")
             }
         }
     }
 
     private func saveTimes() {
+        Logger.shared.log("Saving times to UserDefaults")
         for activity in Activity.allCases {
             let time = totalTimes[activity, default: 0]
             defaults.set(time, forKey: activity.storageKey)

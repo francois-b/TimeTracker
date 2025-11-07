@@ -14,3 +14,5 @@ TimeTracker.app/
 xcuserdata/
 build/
 DerivedData/
+.build/
+app.log

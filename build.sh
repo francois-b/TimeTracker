@@ -4,25 +4,23 @@
 
 echo "Building TimeTracker..."
 
+# Build with Swift Package Manager
+swift build -c release
+
+if [ $? -ne 0 ]; then
+    echo "✗ Build failed"
+    exit 1
+fi
+
 # Create app bundle structure
 mkdir -p TimeTracker.app/Contents/MacOS
 mkdir -p TimeTracker.app/Contents/Resources
 
-# Compile Swift files
-swiftc -o TimeTracker.app/Contents/MacOS/TimeTracker \
-    main.swift \
-    TimeTrackerApp.swift \
-    TimeTracker.swift \
-    -framework Cocoa \
-    -O
+# Copy the compiled binary
+cp .build/release/TimeTracker TimeTracker.app/Contents/MacOS/TimeTracker
 
-if [ $? -eq 0 ]; then
-    # Copy Info.plist
-    cp Info.plist TimeTracker.app/Contents/Info.plist
+# Copy Info.plist
+cp Info.plist TimeTracker.app/Contents/Info.plist
 
-    echo "✓ Build successful!"
-    echo "Run with: open TimeTracker.app"
-else
-    echo "✗ Build failed"
-    exit 1
-fi
+echo "✓ Build successful!"
+echo "Run with: open TimeTracker.app"
