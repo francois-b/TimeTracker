@@ -155,6 +155,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return image
     }
 
+    func createAlertIcon(color: NSColor) -> NSImage {
+        let size = NSSize(width: 64, height: 64)
+        let image = NSImage(size: size)
+
+        image.lockFocus()
+
+        // Draw a large circle for alert dialogs
+        let rect = NSRect(x: 4, y: 4, width: 56, height: 56)
+        let path = NSBezierPath(ovalIn: rect)
+        color.setFill()
+        path.fill()
+
+        image.unlockFocus()
+        image.isTemplate = false
+
+        return image
+    }
+
     func sendStatusUpdate(activity: String?, isActive: Bool) {
         guard let url = URL(string: "http://localhost:3000/api/data") else {
             print("Invalid URL")
@@ -195,7 +213,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         checkInTimer?.invalidate()
 
         // Start new timer for 15 minutes (900 seconds)
-        checkInTimer = Timer.scheduledTimer(withTimeInterval: 900, repeats: false) { [weak self] _ in
+        checkInTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
             self?.showCheckInPrompt()
         }
     }
@@ -212,6 +230,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Still working on \(currentActivity.displayName)?"
         alert.informativeText = "You've been tracking \(currentActivity.displayName) for 15 minutes. Would you like to continue or switch to a different activity?"
         alert.alertStyle = .informational
+        alert.icon = createAlertIcon(color: currentActivity.color)
         alert.addButton(withTitle: "Continue")
         alert.addButton(withTitle: "Change Activity")
         alert.addButton(withTitle: "Stop Tracking")
