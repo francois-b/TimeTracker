@@ -5,7 +5,12 @@ TimeTracker.app/
 .DS_Store
 
 # Xcode
-*.xcodeproj/
-*.xcworkspace/
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+!*.xcworkspace/xcshareddata/
+xcuserdata/
 build/
 DerivedData/
