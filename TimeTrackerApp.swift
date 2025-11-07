@@ -48,9 +48,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menu: NSMenu!
     var checkInTimer: Timer?
     var lastActivityState: Activity?  // Track last activity to detect changes
+    
+    func loadEnvironmentVariables() {
+        // Try to find .env file in multiple locations
+        var envPath: String?
+        
+        // 1. Try the directory containing the app bundle
+        if let bundlePath = Bundle.main.bundlePath as String? {
+            let bundleDir = (bundlePath as NSString).deletingLastPathComponent
+            let path = (bundleDir as NSString).appendingPathComponent(".env")
+            if FileManager.default.fileExists(atPath: path) {
+                envPath = path
+            }
+        }
+        
+        // 2. Try current working directory as fallback
+        if envPath == nil {
+            let currentDir = FileManager.default.currentDirectoryPath
+            let path = (currentDir as NSString).appendingPathComponent(".env")
+            if FileManager.default.fileExists(atPath: path) {
+                envPath = path
+            }
+        }
+        
+        guard let finalPath = envPath,
+              let envContents = try? String(contentsOfFile: finalPath, encoding: .utf8) else {
+            Logger.shared.log("Warning: .env file not found")
+            return
+        }
+        
+        Logger.shared.log("Loading .env from: \(finalPath)")
+        
+        let lines = envContents.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            if trimmedLine.isEmpty || trimmedLine.hasPrefix("#") {
+                continue
+            }
+            
+            let parts = trimmedLine.split(separator: "=", maxSplits: 1)
+            if parts.count == 2 {
+                let key = String(parts[0]).trimmingCharacters(in: .whitespaces)
+                let value = String(parts[1]).trimmingCharacters(in: .whitespaces)
+                setenv(key, value, 1)
+                Logger.shared.log("Loaded env var: \(key)")
+            }
+        }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logger.shared.log("=== TimeTracker Starting ===")
+        
+        // Load environment variables from .env file
+        loadEnvironmentVariables()
 
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
