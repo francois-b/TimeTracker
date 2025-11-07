@@ -4,6 +4,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var timeTracker: TimeTracker!
     var menu: NSMenu!
+    var checkInTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("=== TimeTracker Starting ===")
@@ -154,15 +155,130 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return image
     }
 
+    func sendStatusUpdate(activity: String?, isActive: Bool) {
+        guard let url = URL(string: "http://localhost:3000/api/data") else {
+            print("Invalid URL")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let payload: [String: Any] = [
+            "activity": activity ?? "none",
+            "isActive": isActive,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        } catch {
+            print("Error serializing JSON: \(error)")
+            return
+        }
+
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending status update: \(error)")
+                return
+            }
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Status update sent. Response code: \(httpResponse.statusCode)")
+            }
+        }
+        task.resume()
+    }
+
+    func startCheckInTimer() {
+        // Cancel existing timer if any
+        checkInTimer?.invalidate()
+
+        // Start new timer for 15 minutes (900 seconds)
+        checkInTimer = Timer.scheduledTimer(withTimeInterval: 900, repeats: false) { [weak self] _ in
+            self?.showCheckInPrompt()
+        }
+    }
+
+    func stopCheckInTimer() {
+        checkInTimer?.invalidate()
+        checkInTimer = nil
+    }
+
+    func showCheckInPrompt() {
+        guard let currentActivity = timeTracker.currentActivity else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Still working on \(currentActivity.displayName)?"
+        alert.informativeText = "You've been tracking \(currentActivity.displayName) for 15 minutes. Would you like to continue or switch to a different activity?"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Change Activity")
+        alert.addButton(withTitle: "Stop Tracking")
+
+        let response = alert.runModal()
+
+        switch response {
+        case .alertFirstButtonReturn:
+            // Continue - restart the timer
+            startCheckInTimer()
+
+        case .alertSecondButtonReturn:
+            // Change Activity - show selection dialog
+            showActivitySelection()
+
+        case .alertThirdButtonReturn:
+            // Stop tracking
+            timeTracker.stopTracking()
+            sendStatusUpdate(activity: nil, isActive: false)
+            stopCheckInTimer()
+            updateMenu()
+
+        default:
+            break
+        }
+    }
+
+    func showActivitySelection() {
+        let alert = NSAlert()
+        alert.messageText = "Select New Activity"
+        alert.informativeText = "Choose which activity to track:"
+        alert.alertStyle = .informational
+
+        // Add a button for each activity
+        for activity in Activity.allCases {
+            alert.addButton(withTitle: activity.displayName)
+        }
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+
+        // Map response to activity (first button = .alertFirstButtonReturn = 1000)
+        let buttonIndex = response.rawValue - 1000
+
+        if buttonIndex >= 0 && buttonIndex < Activity.allCases.count {
+            let selectedActivity = Activity.allCases[buttonIndex]
+            timeTracker.startTracking(activity: selectedActivity)
+            sendStatusUpdate(activity: selectedActivity.displayName, isActive: true)
+            startCheckInTimer()
+            updateMenu()
+        }
+        // If Cancel or out of bounds, do nothing
+    }
+
     @objc func activitySelected(_ sender: NSMenuItem) {
         guard let activity = Activity(rawValue: sender.tag) else { return }
 
         if timeTracker.currentActivity == activity {
             // Deselect if clicking the same activity
             timeTracker.stopTracking()
+            sendStatusUpdate(activity: nil, isActive: false)
+            stopCheckInTimer()
         } else {
             // Select new activity
             timeTracker.startTracking(activity: activity)
+            sendStatusUpdate(activity: activity.displayName, isActive: true)
+            startCheckInTimer()
         }
 
         updateMenu()
@@ -190,6 +306,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        stopCheckInTimer()
         timeTracker.stopTracking()
     }
 }
